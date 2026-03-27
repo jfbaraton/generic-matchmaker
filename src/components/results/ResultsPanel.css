@@ -1,0 +1,78 @@
+.results-panel {
+  max-width: 860px;
+  margin: 2rem auto;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  margin-bottom: 1.25rem;
+}
+
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.standings-table thead th {
+  text-align: center;
+  padding: 0.5rem 0.6rem;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.standings-table thead th:first-child,
+.standings-table td:first-child { text-align: center; }
+
+.standings-table td {
+  padding: 0.55rem 0.6rem;
+  text-align: center;
+  color: #cbd5e1;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.standings-table tr:last-child td { border-bottom: none; }
+
+.standings-table tr.top-row td {
+  background: rgba(250,204,21,0.06);
+}
+
+.standings-table tr:hover td {
+  background: rgba(255,255,255,0.04);
+}
+
+.player-col {
+  text-align: left !important;
+  font-weight: 600;
+  color: #e2e8f0 !important;
+}
+
+.points-col {
+  font-weight: 800 !important;
+  color: #93c5fd !important;
+}
+
+.stat-win { color: #4ade80 !important; font-weight: 600; }
+.stat-loss { color: #f87171 !important; }
+
+.results-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #60a5fa;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: underline;
+}
+
