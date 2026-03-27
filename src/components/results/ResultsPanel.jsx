@@ -1,11 +1,13 @@
+import { useState } from 'react'
 import './ResultsPanel.css'
 
 /**
- * Derive standings from matches + scores.
- * Each player gets W/D/L/Points (3 for win, 1 for draw, 0 for loss).
+ * Derive per-player standings from rounds + scores.
+ * gamesPlayed is taken from the live `players` array (which already includes
+ * break-round fractional credits applied by the reducer).
  */
-function deriveStandings(matches, scores) {
-  const stats = {} // playerId -> { name, played, wins, draws, losses, points, goalsFor, goalsAgainst }
+function deriveStandings(players, rounds, scores) {
+  const stats = {}
 
   function ensure(player) {
     if (!stats[player.id]) {
@@ -24,37 +26,41 @@ function deriveStandings(matches, scores) {
     return stats[player.id]
   }
 
-  matches.forEach(round => {
-    round.forEach(match => {
+  rounds.forEach(round => {
+    round.matches.forEach(match => {
       const score = scores[match.id]
       if (!score || score.a === '' || score.b === '') return
 
       const aScore = Number(score.a)
       const bScore = Number(score.b)
-      const aWins = aScore > bScore
-      const bWins = bScore > aScore
-      const draw = aScore === bScore
+      const aWins  = aScore > bScore
+      const bWins  = bScore > aScore
+      const draw   = aScore === bScore
 
       match.teamA.forEach(p => {
         const s = ensure(p)
-        s.played++
-        s.goalsFor += aScore
-        s.goalsAgainst += bScore
-        if (aWins) { s.wins++; s.points += 3 }
+        s.played++; s.goalsFor += aScore; s.goalsAgainst += bScore
+        if (aWins)  { s.wins++;   s.points += 3 }
         else if (draw) { s.draws++; s.points += 1 }
-        else { s.losses++ }
+        else         { s.losses++ }
       })
 
       match.teamB.forEach(p => {
         const s = ensure(p)
-        s.played++
-        s.goalsFor += bScore
-        s.goalsAgainst += aScore
-        if (bWins) { s.wins++; s.points += 3 }
+        s.played++; s.goalsFor += bScore; s.goalsAgainst += aScore
+        if (bWins)  { s.wins++;   s.points += 3 }
         else if (draw) { s.draws++; s.points += 1 }
-        else { s.losses++ }
+        else         { s.losses++ }
       })
     })
+  })
+
+  // Attach current Elo + gamesPlayed from live player state
+  players.forEach(p => {
+    if (stats[p.id]) {
+      stats[p.id].elo        = p.elo
+      stats[p.id].gamesPlayed = p.gamesPlayed
+    }
   })
 
   return Object.values(stats).sort((a, b) => {
@@ -66,17 +72,58 @@ function deriveStandings(matches, scores) {
   })
 }
 
-export default function ResultsPanel({ matches, scores, dispatch }) {
-  const standings = deriveStandings(matches, scores)
-  const totalMatches = matches.reduce((sum, r) => sum + r.length, 0)
-  const scoredMatches = matches.reduce((sum, r) =>
-    sum + r.filter(m => scores[m.id] && scores[m.id].a !== '' && scores[m.id].b !== '').length, 0)
+/** Inline Elo editor cell */
+function EloCell({ playerId, elo, dispatch }) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal]         = useState(elo)
+
+  function commit() {
+    const n = parseInt(val)
+    if (!isNaN(n) && n >= 0) {
+      dispatch({ type: 'UPDATE_PLAYER_ELO', payload: { id: playerId, elo: n } })
+    } else {
+      setVal(elo)
+    }
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <td className="elo-cell editing">
+        <input
+          type="number" min="0"
+          className="elo-inline-input"
+          value={val}
+          onChange={e => setVal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setVal(elo); setEditing(false) } }}
+          autoFocus
+        />
+      </td>
+    )
+  }
+  return (
+    <td
+      className="elo-cell"
+      title="Click to adjust Elo"
+      onClick={() => { setVal(elo); setEditing(true) }}
+    >
+      ⭐ {elo}
+    </td>
+  )
+}
+
+export default function ResultsPanel({ players, rounds, scores, dispatch }) {
+  const standings    = deriveStandings(players, rounds, scores)
+  const totalMatches = rounds.reduce((sum, r) => sum + r.matches.length, 0)
+  const scoredMatches = rounds.reduce((sum, r) =>
+    sum + r.matches.filter(m => scores[m.id] && scores[m.id].a !== '' && scores[m.id].b !== '').length, 0)
 
   return (
     <div className="results-panel card">
       <h2 className="panel-title">🏆 Results & Standings</h2>
       <p className="panel-subtitle">
-        {scoredMatches} / {totalMatches} matches scored
+        {scoredMatches} / {totalMatches} matches scored · Click <strong>⭐ Elo</strong> to adjust after a round
       </p>
 
       {standings.length === 0 ? (
@@ -93,8 +140,8 @@ export default function ResultsPanel({ matches, scores, dispatch }) {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Player</th>
-                <th>P</th>
+                <th className="th-left">Player</th>
+                <th>GP</th>
                 <th>W</th>
                 <th>D</th>
                 <th>L</th>
@@ -102,16 +149,19 @@ export default function ResultsPanel({ matches, scores, dispatch }) {
                 <th>GA</th>
                 <th>GD</th>
                 <th>Pts</th>
+                <th>Elo ✏️</th>
               </tr>
             </thead>
             <tbody>
               {standings.map((s, i) => (
                 <tr key={s.id} className={i === 0 ? 'top-row' : ''}>
-                  <td>
-                    {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
-                  </td>
+                  <td>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
                   <td className="player-col">{s.name}</td>
-                  <td>{s.played}</td>
+                  <td className="gp-col">
+                    {Number.isInteger(s.gamesPlayed)
+                      ? s.gamesPlayed
+                      : s.gamesPlayed?.toFixed(1) ?? '—'}
+                  </td>
                   <td className="stat-win">{s.wins}</td>
                   <td>{s.draws}</td>
                   <td className="stat-loss">{s.losses}</td>
@@ -121,6 +171,7 @@ export default function ResultsPanel({ matches, scores, dispatch }) {
                     {s.goalsFor - s.goalsAgainst > 0 ? '+' : ''}{s.goalsFor - s.goalsAgainst}
                   </td>
                   <td className="points-col">{s.points}</td>
+                  <EloCell playerId={s.id} elo={s.elo ?? 1000} dispatch={dispatch} />
                 </tr>
               ))}
             </tbody>
@@ -146,4 +197,3 @@ export default function ResultsPanel({ matches, scores, dispatch }) {
     </div>
   )
 }
-

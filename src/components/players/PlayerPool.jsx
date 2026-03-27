@@ -15,26 +15,23 @@ export default function PlayerPool({ players, playersPerTeam, sport, dispatch })
   }
 
   function handleBulkAdd() {
-    const raw = window.prompt(
-      'Paste player names, one per line or comma-separated:'
-    )
+    const raw = window.prompt('Paste player names, one per line or comma-separated:')
     if (!raw) return
-    const names = raw
-      .split(/[\n,]+/)
-      .map(n => n.trim())
-      .filter(Boolean)
-    names.forEach(n => dispatch({ type: 'ADD_PLAYER', payload: { name: n } }))
+    raw.split(/[\n,]+/).map(n => n.trim()).filter(Boolean)
+      .forEach(n => dispatch({ type: 'ADD_PLAYER', payload: { name: n } }))
   }
 
-  const ready = players.length >= minPlayers
+  const ready      = players.length >= minPlayers
   const teamsCount = Math.floor(players.length / playersPerTeam)
   const sittingOut = players.length % playersPerTeam
+  const onBreak    = players.filter(p => p.onBreak).length
 
   return (
     <div className="player-pool card">
       <h2 className="panel-title">👥 Player Pool</h2>
       <p className="panel-subtitle">
-        Sport: <strong>{sport}</strong> · {playersPerTeam} players/team
+        Sport: <strong>{sport}</strong> · {playersPerTeam} players/team ·{' '}
+        Click <strong>⭐ Elo</strong> to edit · <strong>▶ Play</strong> / <strong>☕ Break</strong> to toggle availability
       </p>
 
       <form className="add-form" onSubmit={handleAdd}>
@@ -58,15 +55,12 @@ export default function PlayerPool({ players, playersPerTeam, sport, dispatch })
         {players.length > 0 && (
           <>
             <span className="stat">→ {teamsCount} team{teamsCount !== 1 ? 's' : ''}</span>
-            {sittingOut > 0 && (
-              <span className="stat stat-warn">{sittingOut} sitting out</span>
-            )}
+            {sittingOut > 0 && <span className="stat stat-warn">{sittingOut} sitting out</span>}
+            {onBreak > 0 && <span className="stat stat-break">☕ {onBreak} on break</span>}
           </>
         )}
         {!ready && (
-          <span className="stat stat-warn">
-            Need {minPlayers - players.length} more to start
-          </span>
+          <span className="stat stat-warn">Need {minPlayers - players.length} more to start</span>
         )}
       </div>
 
@@ -76,7 +70,8 @@ export default function PlayerPool({ players, playersPerTeam, sport, dispatch })
             <PlayerCard
               key={p.id}
               player={p}
-              onRemove={() => dispatch({ type: 'REMOVE_PLAYER', payload: { id: p.id } })}
+              allPlayers={players}
+              dispatch={dispatch}
             />
           ))}
         </div>
@@ -89,9 +84,7 @@ export default function PlayerPool({ players, playersPerTeam, sport, dispatch })
           <button
             className="btn-danger-outline"
             onClick={() => {
-              if (window.confirm('Remove all players?')) {
-                dispatch({ type: 'CLEAR_PLAYERS' })
-              }
+              if (window.confirm('Remove all players?')) dispatch({ type: 'CLEAR_PLAYERS' })
             }}
           >
             Clear All
@@ -108,4 +101,3 @@ export default function PlayerPool({ players, playersPerTeam, sport, dispatch })
     </div>
   )
 }
-

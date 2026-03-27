@@ -6,16 +6,44 @@
 
 .round-section {}
 
+.round-header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
 .round-title {
   font-size: 1rem;
   font-weight: 700;
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 1px;
-  margin-bottom: 0.75rem;
-  padding-left: 0.25rem;
-  border-left: 3px solid #3b82f6;
   padding-left: 0.6rem;
+  border-left: 3px solid #3b82f6;
+  flex-shrink: 0;
+}
+
+.round-sitting {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sitting-group {
+  font-size: 0.75rem;
+  color: #fbbf24;
+  background: rgba(251,191,36,0.08);
+  border: 1px solid rgba(251,191,36,0.2);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+}
+
+.sitting-group.sitting-out {
+  color: #94a3b8;
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.1);
 }
 
 .round-grid {
@@ -29,4 +57,3 @@
   font-size: 0.875rem;
   padding: 1rem;
 }
-

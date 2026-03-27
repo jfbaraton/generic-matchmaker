@@ -1,5 +1,5 @@
 import { useReducer, useEffect } from 'react'
-import { reducer, initialState } from './state/reducer.js'
+import { reducer, initialState, DEFAULT_ELO } from './state/reducer.js'
 import NavBar from './components/layout/NavBar.jsx'
 import SetupPanel from './components/setup/SetupPanel.jsx'
 import PlayerPool from './components/players/PlayerPool.jsx'
@@ -8,10 +8,33 @@ import ResultsPanel from './components/results/ResultsPanel.jsx'
 
 const STORAGE_KEY = 'matchmaker-state'
 
+function migratePlayer(p) {
+  return {
+    elo: DEFAULT_ELO,
+    gamesPlayed: 0,
+    refuseList: [],
+    acceptOnly: null,
+    onBreak: false,
+    ...p,
+  }
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : initialState
+    if (!raw) return initialState
+    const saved = JSON.parse(raw)
+
+    // Migrate old flat matches[] → rounds[]
+    if (saved.matches && !saved.rounds) {
+      saved.rounds = []
+      delete saved.matches
+    }
+    // Ensure new player fields exist
+    if (saved.players) {
+      saved.players = saved.players.map(migratePlayer)
+    }
+    return { ...initialState, ...saved }
   } catch {
     return initialState
   }
@@ -25,11 +48,11 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   }, [state])
 
-  const { sport, playersPerTeam, numFields, players, matches, scores, view } = state
+  const { sport, playersPerTeam, numFields, players, rounds, scores, view } = state
 
   const minPlayers = playersPerTeam * 2
   const canAdvancePlayers = players.length >= minPlayers
-  const hasSchedule = matches.length > 0
+  const hasSchedule = rounds.length > 0
 
   function renderView() {
     switch (view) {
@@ -58,7 +81,7 @@ export default function App() {
             playersPerTeam={playersPerTeam}
             numFields={numFields}
             sport={sport}
-            matches={matches}
+            rounds={rounds}
             scores={scores}
             dispatch={dispatch}
           />
@@ -66,7 +89,8 @@ export default function App() {
       case 'results':
         return (
           <ResultsPanel
-            matches={matches}
+            players={players}
+            rounds={rounds}
             scores={scores}
             dispatch={dispatch}
           />
@@ -90,4 +114,3 @@ export default function App() {
     </>
   )
 }
-
